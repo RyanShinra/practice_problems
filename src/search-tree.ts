@@ -67,12 +67,33 @@ export class AutoSuggest3 {
         console.log(`${JSON.stringify(addedPhrase)}`)
 
         // returns frequency at phrase's leaf node
-        const dfsHelper = (strPos: number) : number => {
-            const nextLetter = addedPhrase.phrase[strPos];
+        const dfsHelper = (currentNode: TrieNode, strPos: number) : number => {
+            // base case, end of string
+            if (strPos === addedPhrase.phrase.length - 1) {
+                currentNode.setEndOfWord(true);
+                const updatedFreq = addedPhrase.freq;
+                currentNode.setFrequency(updatedFreq); // could do addition here
+                currentNode.updateTop3(addedPhrase); // Also do addition here
+                return updatedFreq;
+            }
+
+            const nextLetter: string | undefined = addedPhrase.phrase[strPos] ?? '';
+            if (!currentNode.getChildren().has(nextLetter)) {
+                const newNode: TrieNode = new TrieNode();
+                newNode.setFrequency(addedPhrase.freq);
+                currentNode.getChildren().set(nextLetter, newNode);
+            }
+            const nextNode = currentNode.getChildren().get(nextLetter);
+            if (!nextNode) return 0; // Should throw, this makes... no sense
+            
+            const newFreq = dfsHelper(nextNode, strPos + 1);
+            
+            currentNode.updateTop3({phrase, freq: newFreq});
+
             return addedPhrase.freq;
         }
 
-        dfsHelper(0);
+        dfsHelper(this.rootNode, 0);
     }
 
     public autocomplete(phrase: string): Array<string> {
