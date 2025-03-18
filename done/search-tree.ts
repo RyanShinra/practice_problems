@@ -61,6 +61,7 @@ class TrieNode {
 
 export class AutoSuggest3 {
     private rootNode: TrieNode = new TrieNode();
+    // REWRITE this using for instead of recursion
     
     public add(phrase:string, freq: number): void {
         const addedPhrase: PhraseFrequency = { phrase, freq };
@@ -68,16 +69,8 @@ export class AutoSuggest3 {
 
         // returns frequency at phrase's leaf node
         const dfsHelper = (currentNode: TrieNode, strPos: number) : number => {
-            // base case, end of string
-            if (strPos === addedPhrase.phrase.length - 1) {
-                currentNode.setEndOfWord(true);
-                const updatedFreq = addedPhrase.freq;
-                currentNode.setFrequency(updatedFreq); // could do addition here
-                currentNode.updateTop3(addedPhrase); // Also do addition here
-                return updatedFreq;
-            }
-
             const nextLetter: string | undefined = addedPhrase.phrase[strPos] ?? '';
+
             if (!currentNode.getChildren().has(nextLetter)) {
                 const newNode: TrieNode = new TrieNode();
                 newNode.setFrequency(addedPhrase.freq);
@@ -85,19 +78,39 @@ export class AutoSuggest3 {
             }
             const nextNode = currentNode.getChildren().get(nextLetter);
             if (!nextNode) return 0; // Should throw, this makes... no sense
+   
+   
+            // base case, end of string
+            if (strPos === addedPhrase.phrase.length - 1) {
+                nextNode.setEndOfWord(true);
+                const updatedFreq = addedPhrase.freq;
+                nextNode.setFrequency(updatedFreq); // could do addition here
+                nextNode.updateTop3(addedPhrase); // Also do addition here
+                currentNode.updateTop3(addedPhrase); // Also do addition here
+                return updatedFreq;
+            }
             
             const newFreq = dfsHelper(nextNode, strPos + 1);
             
             currentNode.updateTop3({phrase, freq: newFreq});
-
-            return addedPhrase.freq;
+            return newFreq;
         }
 
         dfsHelper(this.rootNode, 0);
     }
 
     public autocomplete(phrase: string): Array<string> {
-        console.log(`${phrase}`);
+        // const dfsFindTop3 = (currentNode: TrieNode, strPos: number): Array<string> => {
+            
+            
+            
+        //     //  base case, end of string
+        //     if (strPos === phrase.length - 1) {
+        //         return currentNode.getTop3().map((val: PhraseFrequency) => val.phrase);
+        //     }
+        //     // if ()
+        // }
+        // console.log(`${phrase}`);
         return [phrase];
     }
 
