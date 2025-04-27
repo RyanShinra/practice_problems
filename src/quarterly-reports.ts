@@ -14,9 +14,9 @@ interface Transaction {
   
   // Defines the structure of the final result
   interface QuarterlyReport {
-    total_income: number;
-    total_expenses: number;
-    top_expenses: ExpenseCategory[];
+    totalIncome: number;
+    totalExpenses: number;
+    topExpenses: ExpenseCategory[];
   }
   
   const NUMBER_TOP_EXPENSES = 3;
@@ -28,11 +28,14 @@ interface Transaction {
    */
   function parseTransaction(transactionStr: string): Transaction {
     const [dateStr, type, amountStr, accountCode] = transactionStr.split('|');
+    if (!dateStr || !type || !amountStr || !accountCode) {
+        throw `Bad input transaction: ${transactionStr}`;
+    }
     return {
-      date: new Date(dateStr!),
+      date: new Date(dateStr),
       type: type as 'INCOME' | 'EXPENSE' | 'TRANSFER',
-      amount: parseFloat(amountStr!),
-      accountCode: accountCode!
+      amount: parseFloat(amountStr),
+      accountCode: accountCode
     };
   }
   
@@ -63,49 +66,50 @@ interface Transaction {
   export function generateQuarterlyReport(transactions: string[], quarter: number): QuarterlyReport {
     // TODO: Implement this function
 
+    if (quarter < 1 || quarter > 4) {
+        throw new Error(`Invalid quarter: ${quarter}. Must be between 1 and 4.`);
+    }
+
     const quarterTransactions: Transaction[] = transactions
         .map((str: string) => parseTransaction(str))
         .filter((txn: Transaction) => isInQuarter(txn.date, quarter));
 
-        let total_income = 0;
-        let total_expenses = 0;
+        let totalIncome = 0;
+        let totalExpenses = 0;
         const categoryExpenses: Map<string, number> = new Map();
-        const top_expenses: ExpenseCategory[] = []; // Need to manually keep this at 3
 
         quarterTransactions.forEach((transaction: Transaction) => {
-            total_expenses += transaction.type === 'EXPENSE' ? transaction.amount : 0;
-            total_income += transaction.type === 'INCOME' ? transaction.amount : 0;
+            if (transaction.type === 'INCOME') {
+                totalIncome += transaction.amount;
+            }
+            else if (transaction.type === 'EXPENSE') {
+                totalExpenses += transaction.amount;
 
-            if (transaction.type === 'EXPENSE') {
                 const currentCategory = transaction.accountCode;
                 let categoryTotalExp: number = categoryExpenses.get(currentCategory) || 0;
 
                 categoryTotalExp += transaction.amount;
                 categoryExpenses.set(currentCategory, categoryTotalExp);
-
-                const currentExpense: ExpenseCategory = { amount: categoryTotalExp, category: currentCategory };
-                const alreadyExpensive: ExpenseCategory | undefined = top_expenses.find(
-                    (value: ExpenseCategory) => value.category === currentCategory
-                );
-
-                if (alreadyExpensive) {
-                    console.log(`Found Already Expensive Category: ${currentCategory} @ ${categoryTotalExp}`);
-                    alreadyExpensive.amount = categoryTotalExp;
-                } 
-                else if (top_expenses.length < NUMBER_TOP_EXPENSES) {
-                    top_expenses.push(currentExpense);
-                } 
-                else if (categoryTotalExp > top_expenses[NUMBER_TOP_EXPENSES - 1]!.amount) {
-                    top_expenses[NUMBER_TOP_EXPENSES - 1] = currentExpense;
-                }
-
-                top_expenses.sort((a: ExpenseCategory, b: ExpenseCategory) => b.amount - a.amount);
             }
         });
+        
+        const topExpenses: ExpenseCategory[] = []; // Need to manually keep this at 3
+        categoryExpenses.forEach((categoryTotalExp: number, currentCategory: string) => {
+            
+            const currentExpense: ExpenseCategory = { amount: categoryTotalExp, category: currentCategory };
+            if (topExpenses.length < NUMBER_TOP_EXPENSES) {
+                topExpenses.push(currentExpense);
+            } 
+            else if (categoryTotalExp > topExpenses[NUMBER_TOP_EXPENSES - 1]!.amount) {
+                topExpenses[NUMBER_TOP_EXPENSES - 1] = currentExpense;
+            }
+            topExpenses.sort((a: ExpenseCategory, b: ExpenseCategory) => b.amount - a.amount);
+        });
+
     return {
-      total_income,
-      total_expenses,
-      top_expenses
+      totalIncome,
+      totalExpenses,
+      topExpenses
     };
   }
   
